@@ -12,7 +12,10 @@ import { SecurityEventsView } from './views/SecurityEventsView';
 import { AnalyticsView } from './views/AnalyticsView';
 import { DataSourcesView } from './views/DataSourcesView';
 import { MethodologyView } from './views/MethodologyView';
+import { CompareView } from './views/CompareView';
 import { SettingsView } from './views/SettingsView';
+import { FirstAlertNotificationBanner } from './components/FirstAlertNotificationBanner';
+import { EmployeeInvestigationPanel } from './components/EmployeeInvestigationPanel';
 import { api } from './services/api';
 
 type AppRoute = 'home' | 'login' | 'dashboard';
@@ -40,11 +43,14 @@ export function App() {
   // Dashboard state
   const [currentDashboardView, setCurrentDashboardView] = useState<NavItem>('overview');
   const [stats, setStats] = useState<any>(null);
+  const [scrutinySummary, setScrutinySummary] = useState<any>(null);
   const [isPipelineRunning, setIsPipelineRunning] = useState(false);
 
   // Cross-view selection state
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
   const [selectedInvestigationId, setSelectedInvestigationId] = useState<string | null>(null);
+  const [panelEmployeeId, setPanelEmployeeId] = useState<string | null>(null);
+  const [focusAlertId, setFocusAlertId] = useState<string | undefined>(undefined);
 
   // Sync route with URL history
   useEffect(() => {
@@ -108,8 +114,12 @@ export function App() {
 
   async function loadOverviewStats() {
     try {
-      const data = await api.getOverviewStats();
-      setStats(data);
+      const [data, dirRes] = await Promise.all([
+        api.getOverviewStats().catch(() => null),
+        api.getScrutinyDirectory({ pageSize: 1 }).catch(() => null)
+      ]);
+      if (data) setStats(data);
+      if (dirRes?.summary) setScrutinySummary(dirRes.summary);
     } catch (err) {
       console.error('Failed to load overview statistics:', err);
     }
@@ -190,9 +200,9 @@ export function App() {
         onSelectView={(v) => {
           setCurrentDashboardView(v);
         }}
-        anomaliesCount={stats?.anomaliesIdentified || stats?.anomaliesFlagged || 3}
+        anomaliesCount={scrutinySummary?.unresolvedAlerts !== undefined ? scrutinySummary.unresolvedAlerts : (stats?.anomaliesIdentified || 282)}
         pendingFindingsCount={stats?.pendingFindingsReviewCount || 3}
-        openInvestigationsCount={stats?.openInvestigationsCount || 3}
+        openInvestigationsCount={scrutinySummary?.openCases !== undefined ? scrutinySummary.openCases : (stats?.openInvestigationsCount || 0)}
         onLogout={handleLogout}
         onNavigateHome={() => navigateTo('home')}
         userEmail={userEmail}
@@ -213,6 +223,14 @@ export function App() {
           totalEvents={stats?.totalEventsProcessed || 2173}
           onLogout={handleLogout}
           userEmail={userEmail}
+        />
+
+        {/* First-Alert Triage Notification Banner */}
+        <FirstAlertNotificationBanner
+          onReviewNow={(empId, alertId) => {
+            setPanelEmployeeId(empId);
+            setFocusAlertId(alertId);
+          }}
         />
 
         {/* Scrollable View Container */}
@@ -265,6 +283,10 @@ export function App() {
             <AnalyticsView />
           )}
 
+          {currentDashboardView === 'compare' && (
+            <CompareView />
+          )}
+
           {currentDashboardView === 'datasources' && (
             <DataSourcesView />
           )}
@@ -277,6 +299,16 @@ export function App() {
             <SettingsView />
           )}
         </main>
+
+        {/* On-Demand Global Employee Investigation Panel */}
+        <EmployeeInvestigationPanel
+          employeeId={panelEmployeeId}
+          focusAlertId={focusAlertId}
+          onClose={() => {
+            setPanelEmployeeId(null);
+            setFocusAlertId(undefined);
+          }}
+        />
       </div>
     </div>
   );

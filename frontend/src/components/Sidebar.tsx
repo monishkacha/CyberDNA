@@ -3,16 +3,13 @@ import {
   LayoutDashboard,
   Fingerprint,
   ShieldAlert,
-  Share2,
   Terminal,
-  BarChart3,
   Database,
-  BookOpen,
-  Settings,
   ChevronRight,
   LogOut,
   Globe,
-  AlertTriangle
+  AlertTriangle,
+  Scale
 } from 'lucide-react';
 import { CyberDNALogo } from './CyberDNALogo';
 
@@ -24,6 +21,7 @@ export type NavItem =
   | 'graph'
   | 'events'
   | 'analytics'
+  | 'compare'
   | 'datasources'
   | 'methodology'
   | 'settings';
@@ -55,10 +53,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'events' as NavItem, label: 'Activity Explorer', icon: Terminal },
     { id: 'findings' as NavItem, label: 'Security Alerts', icon: AlertTriangle, badge: pendingFindingsCount > 0 ? `${pendingFindingsCount} review` : undefined },
     { id: 'investigations' as NavItem, label: 'Investigations', icon: ShieldAlert, badge: openInvestigationsCount > 0 ? `${openInvestigationsCount} active` : undefined },
-    { id: 'graph' as NavItem, label: 'Activity Graph', icon: Share2 },
-    { id: 'analytics' as NavItem, label: 'PySpark Pipeline', icon: BarChart3 },
+    { id: 'compare' as NavItem, label: 'Compare', icon: Scale, badge: '70 GT' },
     { id: 'datasources' as NavItem, label: 'Data Sources', icon: Database },
-    { id: 'settings' as NavItem, label: 'Settings', icon: Settings },
   ];
 
   return (

@@ -448,47 +448,8 @@ class DataStore {
           this.graphEdges = (data.graph.edges || []).slice(0, 600);
         }
 
-        // 5. Load Digital Forensics Investigations
-        if (data.attack_chains && Array.isArray(data.attack_chains)) {
-          this.investigations = data.attack_chains.map((chain: any, idx: number) => ({
-            id: `INV-2026-${(idx + 101).toString()}`,
-            title: chain.title,
-            status: idx === 0 ? 'In Progress' : idx === 1 ? 'Needs Review' : idx === 2 ? 'In Progress' : 'Resolved',
-            severity: idx < 2 ? 'CRITICAL' : idx < 3 ? 'HIGH' : 'MEDIUM',
-            createdAt: chain.start_time || new Date().toISOString(),
-            updatedAt: chain.end_time || new Date().toISOString(),
-            leadAnalyst: idx % 2 === 0 ? 'Dr. Sarah Lin (Lead Digital Forensics Analyst)' : 'Marcus Vance (Senior Insider Threat Investigator)',
-            summary: chain.investigative_hypothesis || 'Automated multi-stage telemetry correlation identified significant behavioral deviation sequence.',
-            involvedEntities: chain.involved_entities || [],
-            correlatedChains: [chain.chain_id],
-            evidenceEventIds: chain.evidence_event_ids || [],
-            notes: [
-              {
-                id: `NOTE-${idx}-1`,
-                author: 'CyberDNA Analytics Pipeline',
-                timestamp: chain.start_time || '2026-10-16T20:00:00Z',
-                text: `Automated incident correlation triggered by ${chain.tactic_sequence?.join(' -> ')}.`,
-                category: 'CORRELATION'
-              },
-              {
-                id: `NOTE-${idx}-2`,
-                author: 'Digital Forensics Case Lead',
-                timestamp: chain.end_time || '2026-10-17T08:30:00Z',
-                text: 'Telemetry confirms timestamped sequence across endpoint, storage, and egress boundary. Host memory preservation initiated.',
-                category: 'OBSERVED_FACT'
-              }
-            ],
-            observedFacts: chain.observed_facts || [
-              'Timestamped telemetry confirms sequence of operations',
-              'Threshold exceeded baseline by multiple standard deviations'
-            ],
-            hypotheses: [
-              chain.investigative_hypothesis || 'Observed sequence requires formal interview and validation against authorized business activities.'
-            ],
-            confidence: chain.confidence_score || 0.88,
-            limitations: chain.limitations || 'Perimeter and endpoint logs establish transfer metrics; complete file content reconstruction requires bitstream drive image.'
-          }));
-        }
+        // 5. Investigations managed dynamically via InvestigationService
+        this.investigations = [];
       }
 
       // 6. Load Activity Events from CSV
@@ -634,7 +595,17 @@ class DataStore {
   }
 
   public getEmployeeById(id: string): EmployeeSummary | undefined {
-    return this.employees.find(e => e.id.toLowerCase() === id.toLowerCase() || e.employeeId.toLowerCase() === id.toLowerCase());
+    if (!id) return undefined;
+    const clean = id.toLowerCase().trim();
+    const withoutUser = clean.replace(/^user:/i, '');
+    const withUser = `user:${withoutUser}`;
+
+    return this.employees.find(e => {
+      const eid = e.id.toLowerCase();
+      const empId = e.employeeId.toLowerCase();
+      return eid === clean || eid === withoutUser || eid === withUser ||
+             empId === clean || empId === withoutUser || empId === withUser;
+    });
   }
 
   public getEntityById(id: string): EntitySummary | undefined {
@@ -652,8 +623,13 @@ class DataStore {
   public getFindings(filter?: { employeeId?: string; category?: string; reviewStatus?: string }): ThreatFinding[] {
     let result = this.findings;
     if (filter?.employeeId) {
-      const eid = filter.employeeId.toLowerCase();
-      result = result.filter(f => f.employeeId.toLowerCase() === eid);
+      const eid = filter.employeeId.toLowerCase().trim();
+      const withoutUser = eid.replace(/^user:/i, '');
+      const withUser = `user:${withoutUser}`;
+      result = result.filter(f => {
+        const feid = f.employeeId.toLowerCase();
+        return feid === eid || feid === withoutUser || feid === withUser;
+      });
     }
     if (filter?.category) {
       result = result.filter(f => f.category === filter.category);
@@ -676,7 +652,18 @@ class DataStore {
   }
 
   public getProfileByEntityId(id: string): BehavioralProfile | undefined {
-    return this.profiles.get(id) || Array.from(this.profiles.values()).find(p => p.entityId.toLowerCase() === id.toLowerCase());
+    if (!id) return undefined;
+    const clean = id.toLowerCase().trim();
+    const withoutUser = clean.replace(/^user:/i, '');
+    const withUser = `user:${withoutUser}`;
+
+    return this.profiles.get(clean) ||
+           this.profiles.get(withUser) ||
+           this.profiles.get(withoutUser) ||
+           Array.from(this.profiles.values()).find(p => {
+             const pid = p.entityId.toLowerCase();
+             return pid === clean || pid === withoutUser || pid === withUser;
+           });
   }
 
   public getEvents(filter: {
@@ -897,9 +884,8 @@ class DataStore {
     });
 
     return {
-      organizationName: 'Apex Global Technologies (Fictional)',
-      isSyntheticDemo: true,
-      demoNotice: 'DEMO ENVIRONMENT: Operating on synthetic behavioral telemetry conforming to CERT Insider Threat Test Dataset schemas. Ground-truth research datasets remain isolated.',
+      organizationName: 'CERT r4.2 Benchmark Environment',
+      isSyntheticDemo: false,
       totalEmployees: this.employees.length,
       totalEventsProcessed: this.events.length,
       totalProfilesGenerated: this.profiles.size,

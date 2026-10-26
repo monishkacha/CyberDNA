@@ -99,16 +99,16 @@ export const SecurityEventsView: React.FC<SecurityEventsViewProps> = ({
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-6 bg-[#0A0A0A] text-[#D8D8D8] animate-fade-in">
       {/* Editorial Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-[#292929] pb-6 gap-4">
+      <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-[#292929] pb-5 gap-4">
         <div>
           <div className="text-[11px] font-mono tracking-widest text-[#F2D35E] uppercase">
-            Employee Activity Explorer
+            Activity Explorer
           </div>
-          <h1 className="text-3xl md:text-5xl font-serif font-normal tracking-tight text-white mt-1">
+          <h1 className="text-3xl md:text-4xl font-serif font-normal tracking-tight text-white mt-1">
             Activity <span className="italic text-[#F2D35E]">Explorer</span>
           </h1>
-          <p className="text-xs text-[#A0A0A0] mt-1.5 font-light max-w-2xl leading-relaxed">
-            Searchable table of employee activity records including logins, file access, USB device usage, and web activity across all company departments.
+          <p className="text-xs text-[#A0A0A0] mt-1 font-light max-w-2xl">
+            Searchable employee telemetry events across logon, file access, and USB device activity.
           </p>
         </div>
 
@@ -194,27 +194,25 @@ export const SecurityEventsView: React.FC<SecurityEventsViewProps> = ({
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-[#292929] bg-[#171717] text-[10px] font-mono text-[#777777] uppercase tracking-wider">
-                <th className="py-2.5 px-3">Event ID</th>
                 <th className="py-2.5 px-3">Time (UTC)</th>
                 <th className="py-2.5 px-3">Employee</th>
                 <th className="py-2.5 px-3">Activity Type</th>
                 <th className="py-2.5 px-3">Resource / Details</th>
-                <th className="py-2.5 px-3">Destination / Device</th>
                 <th className="py-2.5 px-3 text-right">Data Volume</th>
                 <th className="py-2.5 px-3 text-center">Alert Level</th>
-                <th className="py-2.5 px-3 text-center">Details</th>
+                <th className="py-2.5 px-3 text-center">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#292929] text-xs font-mono">
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="py-10 text-center text-[#777777]">
+                  <td colSpan={7} className="py-10 text-center text-[#777777]">
                     Loading verified telemetry records...
                   </td>
                 </tr>
               ) : events.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-10 text-center text-[#777777]">
+                  <td colSpan={7} className="py-10 text-center text-[#777777]">
                     No security events match the current filter criteria.
                   </td>
                 </tr>
@@ -232,9 +230,6 @@ export const SecurityEventsView: React.FC<SecurityEventsViewProps> = ({
                         isUsb ? 'bg-[#1C180E]' : ''
                       }`}
                     >
-                      <td className="py-2.5 px-3 text-[#F2D35E] font-medium">
-                        {evt.event_id}
-                      </td>
                       <td className="py-2.5 px-3 text-[11px] text-[#A0A0A0]">
                         {new Date(evt.timestamp).toUTCString().slice(5, 25)}
                       </td>
@@ -259,11 +254,8 @@ export const SecurityEventsView: React.FC<SecurityEventsViewProps> = ({
                           {evt.event_type}
                         </span>
                       </td>
-                      <td className="py-2.5 px-3 text-white truncate max-w-[200px]" title={evt.process_name || evt.target_resource}>
+                      <td className="py-2.5 px-3 text-white truncate max-w-[240px]" title={evt.process_name || evt.target_resource}>
                         {evt.process_name || evt.target_resource}
-                      </td>
-                      <td className="py-2.5 px-3 text-[#A0A0A0]">
-                        {evt.destination_ip}:{evt.destination_port}
                       </td>
                       <td className="py-2.5 px-3 text-right text-white">
                         {evt.bytes_transferred > 1_000_000

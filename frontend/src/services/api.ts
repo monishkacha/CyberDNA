@@ -31,6 +31,25 @@ async function fetchJson<T>(endpoint: string, options?: RequestInit): Promise<T>
   return json.data !== undefined ? json.data : json;
 }
 
+async function fetchRawJson<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_BASE}${endpoint}`, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...(options?.headers || {})
+    },
+    ...options
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    return {
+      success: false,
+      error: json.error || `HTTP ${res.status}: ${res.statusText}`,
+      status: res.status
+    } as any;
+  }
+  return json;
+}
+
 export const api = {
   async getOverviewStats() {
     return fetchJson<any>('/stats/overview');
@@ -150,6 +169,136 @@ export const api = {
 
   async runPipeline() {
     return fetchJson<any>('/pipeline/run', { method: 'POST' });
+  },
+
+  async getEvaluationSummary() {
+    return fetchJson<any>('/evaluation/summary');
+  },
+
+  async getEvaluationIncidents(params?: { scenario?: number; status?: string; search?: string }) {
+    const q = new URLSearchParams();
+    if (params?.scenario) q.set('scenario', String(params.scenario));
+    if (params?.status) q.set('status', params.status);
+    if (params?.search) q.set('search', params.search);
+    return fetchJson<{ total: number; filtered: number; data: any[] }>(`/evaluation/incidents?${q.toString()}`);
+  },
+
+  async getEvaluationScenarios() {
+    return fetchJson<any[]>('/evaluation/scenarios');
+  },
+
+  async getEvaluationRules() {
+    return fetchJson<any[]>('/evaluation/rules');
+  },
+
+  async getEvaluationCoverage() {
+    return fetchJson<any>('/evaluation/coverage');
+  },
+
+  async rerunEvaluation() {
+    return fetchJson<any>('/evaluation/rerun', { method: 'POST' });
+  },
+
+  // ==========================================
+  // Employee Scrutiny & Investigation Engine
+  // ==========================================
+  async getScrutinyDirectory(params?: {
+    page?: number;
+    pageSize?: number;
+    scrutiny?: string;
+    hasOpenCases?: boolean;
+    hasAlerts?: boolean;
+    search?: string;
+    sortBy?: string;
+    sortOrder?: string;
+  }) {
+    const q = new URLSearchParams();
+    if (params?.page) q.set('page', String(params.page));
+    if (params?.pageSize) q.set('pageSize', String(params.pageSize));
+    if (params?.scrutiny && params.scrutiny !== 'ALL') q.set('scrutiny', params.scrutiny);
+    if (params?.hasOpenCases !== undefined) q.set('hasOpenCases', String(params.hasOpenCases));
+    if (params?.hasAlerts !== undefined) q.set('hasAlerts', String(params.hasAlerts));
+    if (params?.search) q.set('search', params.search);
+    if (params?.sortBy) q.set('sortBy', params.sortBy);
+    if (params?.sortOrder) q.set('sortOrder', params.sortOrder);
+    return fetchRawJson<any>(`/scrutiny/employees?${q.toString()}`);
+  },
+
+  async getScrutinyEmployee(employeeId: string) {
+    return fetchRawJson<any>(`/scrutiny/employees/${encodeURIComponent(employeeId)}`);
+  },
+
+  async createScrutinyCase(employeeId: string, data: {
+    title: string;
+    priority?: string;
+    linkedAlertIds?: string[];
+    leadInvestigator?: string;
+    initialNote?: string;
+    initialNoteCategory?: string;
+  }) {
+    return fetchRawJson<any>(`/scrutiny/employees/${encodeURIComponent(employeeId)}/cases`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  async addScrutinyCaseNote(caseId: string, data: {
+    author?: string;
+    text: string;
+    category?: string;
+  }) {
+    return fetchRawJson<any>(`/scrutiny/cases/${encodeURIComponent(caseId)}/notes`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  async recordCaseOutcome(caseId: string, data: {
+    outcome: string;
+    resolutionNotes: string;
+    investigator?: string;
+    adjustScrutiny?: boolean;
+  }) {
+    return fetchRawJson<any>(`/scrutiny/cases/${encodeURIComponent(caseId)}/outcome`, {
+      method: 'PATCH',
+      body: JSON.stringify(data)
+    });
+  },
+
+  async updateScrutinyCaseStatus(caseId: string, status: string) {
+    return fetchRawJson<any>(`/scrutiny/cases/${encodeURIComponent(caseId)}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status })
+    });
+  },
+
+  async adjustEmployeeScrutiny(employeeId: string, data: {
+    newLevel: string;
+    reason: string;
+    actor?: string;
+  }) {
+    return fetchRawJson<any>(`/scrutiny/employees/${encodeURIComponent(employeeId)}/scrutiny`, {
+      method: 'PATCH',
+      body: JSON.stringify(data)
+    });
+  },
+
+  async getScrutinyNotifications() {
+    return fetchRawJson<any>('/scrutiny/notifications');
+  },
+
+  async dismissScrutinyNotification(notificationId: string) {
+    return fetchRawJson<any>(`/scrutiny/notifications/${encodeURIComponent(notificationId)}/dismiss`, {
+      method: 'PATCH'
+    });
+  },
+
+  async getScrutinyAuditLog() {
+    return fetchRawJson<any>('/scrutiny/audit-log');
+  },
+
+  async getScrutinyAlerts(limit: number = 10) {
+    return fetchRawJson<any>(`/scrutiny/alerts?limit=${limit}`);
   },
 
   getExportUrl(investigationId: string) {

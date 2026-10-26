@@ -220,3 +220,122 @@ export interface PipelineRunMeta {
     schema_compliance: boolean;
   };
 }
+
+// ==========================================
+// Scrutiny & Investigation Engine Types
+// ==========================================
+export type ScrutinyLevel = 'LOW' | 'MEDIUM' | 'HIGH';
+export type CaseOutcome = 
+  | 'Resolved — Legitimate Activity'
+  | 'Potential Concern — Further Investigation Required'
+  | 'Confirmed Incident — Evidence Reviewed';
+
+export interface ScrutinyHistoryRecord {
+  id: string;
+  previousLevel: ScrutinyLevel;
+  newLevel: ScrutinyLevel;
+  timestamp: string;
+  reason: string;
+  relevantAlertOrCaseIds?: string[];
+  isManual: boolean;
+  actor: string;
+}
+
+export interface InvestigationCaseRecord {
+  id: string;
+  employeeId: string;
+  linkedAlertIds: string[];
+  title: string;
+  status: 'New' | 'In Progress' | 'Needs Review' | 'Resolved';
+  outcome?: CaseOutcome;
+  priority: 'LOW' | 'MEDIUM' | 'HIGH';
+  leadInvestigator: string;
+  createdAt: string;
+  updatedAt: string;
+  resolutionDate?: string;
+  resolutionNotes?: string;
+  notes: {
+    id: string;
+    author: string;
+    timestamp: string;
+    text: string;
+    category: 'OBSERVED_FACT' | 'HYPOTHESIS' | 'CORRELATION' | 'CONCLUSION';
+  }[];
+  scrutinyChangeApplied?: {
+    from: ScrutinyLevel;
+    to: ScrutinyLevel;
+    reason: string;
+  };
+}
+
+export interface AuditEventRecord {
+  id: string;
+  actor: string;
+  actionType: 'CASE_CREATED' | 'NOTE_ADDED' | 'STATUS_CHANGED' | 'OUTCOME_RECORDED' | 'SCRUTINY_CHANGED' | 'ALERT_REVIEWED';
+  employeeId: string;
+  caseId?: string;
+  previousValue?: string;
+  newValue?: string;
+  reason: string;
+  timestamp: string;
+}
+
+export interface AlertNotificationRecord {
+  id: string;
+  employeeId: string;
+  alertId: string;
+  isFirstAlert: boolean;
+  message: string;
+  status: 'PENDING' | 'DISMISSED' | 'REVIEWED';
+  timestamp: string;
+  severity: Severity;
+  alertType: string;
+}
+
+export interface ScrutinyAlertRecord {
+  alert_id: string;
+  user: string;
+  alert_type: string;
+  severity: Severity;
+  metric_name: string;
+  metric_value: number;
+  threshold: number;
+  trigger_reason: string;
+  dataset_source: string;
+  disclaimer?: string;
+  review_status: 'NEW' | 'UNDER_REVIEW' | 'BENIGN' | 'RESOLVED' | 'CONFIRMED';
+  linked_case_id?: string;
+}
+
+export interface ScrutinyEmployeeRecord {
+  employeeId: string;
+  name?: string;
+  department?: string;
+  role?: string;
+  datasetSource?: 'CERT' | 'SYNTHETIC_DEMO';
+  isDemo?: boolean;
+  scrutinyLevel: ScrutinyLevel;
+  totalAlerts: number;
+  openCasesCount: number;
+  resolvedCasesCount: number;
+  lastAlertTimestamp?: string;
+  lastAlertReason?: string;
+  mostRecentCaseStatus?: string;
+  activityTotals: {
+    totalEvents: number;
+    distinctPcs: number;
+    totalLogons: number;
+    totalLogoffs: number;
+    offHoursLogons: number;
+    usbConnects: number;
+    usbDisconnects: number;
+    fileCopies: number;
+    firstActivity?: string;
+    lastActivity?: string;
+  };
+  scrutinyExplanation: string;
+  scrutinyHistory: ScrutinyHistoryRecord[];
+  alerts: ScrutinyAlertRecord[];
+  cases: InvestigationCaseRecord[];
+}
+
